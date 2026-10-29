@@ -1,6 +1,16 @@
+using System.Diagnostics;
+
 const int filas = 5;
 const int columnas = 5;
 const int cantidadClientes = 50;
+
+Console.WriteLine("** Sistema de ventas de tickets **");
+Console.WriteLine("1) Ejecución sin sincronización de hilos");
+Console.WriteLine("2) Ejecución con sincronización de hilos Semaforo");
+Console.Write("Opción: ");
+
+int opcionEjec = Convert.ToInt32(Console.ReadLine());
+Stopwatch stopwatch = Stopwatch.StartNew();
 
 int[,] butacas = new int[filas, columnas];
 bool[] comprasRealizadas = new bool[cantidadClientes];
@@ -15,7 +25,8 @@ for (int i = 0; i < cantidadClientes; i++)
     hilos[i] = new Thread(() =>
     {
         manejoHilos.Wait();
-        ComprarButaca(clienteId);
+        if(opcionEjec == 1){ComprarButaca(clienteId);}
+        else if(opcionEjec == 2){ComprarButacaSemaforo(clienteId);}
     });
     hilos[i].Start();
 }
@@ -28,6 +39,7 @@ foreach (Thread hilo in hilos)
     hilo.Join();
 }
 
+TimeSpan te = stopwatch.Elapsed;
 int ventasRegistradas = comprasRealizadas.Count(compra => compra);
 int ventasNoConcentradas = comprasNoRealizadas.Count(compra => compra);
 int butacasOcupadas = 0;
@@ -60,8 +72,28 @@ Console.WriteLine($"\nCompras informadas por clientes: {ventasRegistradas}");
 Console.WriteLine($"Butacas ocupadas al final:      {butacasOcupadas}");
 Console.WriteLine($"Sobreventas posibles:           {ventasRegistradas - butacasOcupadas}");
 Console.WriteLine($"Clientes que no pudieron comprar:           {ventasNoConcentradas}");
+Console.WriteLine($"Tiempo de ejecución:           {te.Milliseconds}ms");
 
 void ComprarButaca(int clienteId)
+{
+    
+    int fila = Random.Shared.Next(filas);
+    int columna = Random.Shared.Next(columnas);
+
+    if (butacas[fila, columna] == 0)
+    {
+        Thread.Sleep(10); /* Simula latencia para que se genere la race-condition (Ayudado con IA, agregarlo al informe) */
+        butacas[fila, columna] = clienteId;
+        comprasRealizadas[clienteId - 1] = true;
+        Console.WriteLine($"Cliente {clienteId,3} compró la butaca ({fila + 1}, {columna + 1})");
+        return;
+    }
+    
+    comprasNoRealizadas[clienteId - 1] = true;
+    Console.WriteLine($"Cliente {clienteId,3} no encontró una butaca libre.");
+}
+
+void ComprarButacaSemaforo(int clienteId)
 {
     
     int fila = Random.Shared.Next(filas);
