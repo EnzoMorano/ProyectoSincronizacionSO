@@ -6,12 +6,14 @@ const int cantidadClientes = 50;
 
 Console.WriteLine("** Sistema de ventas de tickets **");
 Console.WriteLine("1) Ejecución sin sincronización de hilos");
-Console.WriteLine("2) Ejecución con sincronización de hilos Semaforo");
+Console.WriteLine("2) Ejecución con sincronización de hilos -Semaforo-");
+Console.WriteLine("3) Ejecución con sincronización de hilos -Lock-");
 Console.Write("Opción: ");
 
 int opcionEjec = Convert.ToInt32(Console.ReadLine());
 Stopwatch stopwatch = Stopwatch.StartNew();
 
+object sync = new object();
 int[,] butacas = new int[filas, columnas];
 bool[] comprasRealizadas = new bool[cantidadClientes];
 bool[] comprasNoRealizadas = new bool[cantidadClientes];
@@ -27,6 +29,7 @@ for (int i = 0; i < cantidadClientes; i++)
         manejoHilos.Wait();
         if(opcionEjec == 1){ComprarButaca(clienteId);}
         else if(opcionEjec == 2){ComprarButacaSemaforo(clienteId);}
+        else if(opcionEjec == 3){ComprarButacaLock(clienteId);}
     });
     hilos[i].Start();
 }
@@ -111,6 +114,27 @@ void ComprarButacaSemaforo(int clienteId)
     }
     
     semaforoHilos.Release();
+    comprasNoRealizadas[clienteId - 1] = true;
+    Console.WriteLine($"Cliente {clienteId,3} no encontró una butaca libre.");
+}
+
+void ComprarButacaLock(int clienteId)
+{
+    
+    int fila = Random.Shared.Next(filas);
+    int columna = Random.Shared.Next(columnas);
+    
+    lock(sync){
+    if (butacas[fila, columna] == 0)
+    {
+        Thread.Sleep(10); /* Simula latencia para que se genere la race-condition (Ayudado con IA, agregarlo al informe) */
+        butacas[fila, columna] = clienteId;
+        comprasRealizadas[clienteId - 1] = true;
+        Console.WriteLine($"Cliente {clienteId,3} compró la butaca ({fila + 1}, {columna + 1})");
+        return;
+    }
+    }
+
     comprasNoRealizadas[clienteId - 1] = true;
     Console.WriteLine($"Cliente {clienteId,3} no encontró una butaca libre.");
 }
